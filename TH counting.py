@@ -49,24 +49,30 @@ def FindMinInternalCircle(im, contours):
         circles.append([center_of_circle, radius])
     return circles
 
-# 接受一个cv2 image，返回mask, im_copy, num, big, mid, small
+# 接受一个cv2 image，返回im_copy（即标注后的图片）
 def THCounting(im):
 
     im_copy = np.copy(im)
+
+    # 这是根据B，G通道来筛选出TH神经元，感觉效果比下面HSV筛选差
+    # b, g, r = cv2.split(im)
+    # b_copy = b.copy()
+    # g_copy = g.copy()
+    # b_copy[b_copy <= 150] = 1
+    # b_copy[b_copy > 150] = 0
+    # g_copy[g_copy <= 140] = 1
+    # g_copy[g_copy > 140] = 0
+    # mask = 255*(b_copy * g_copy).astype(np.uint8)
+
     hight = im.shape[0]
     width = im.shape[1]
     im = cv2.cvtColor(im, cv2.COLOR_BGR2HSV)
-
     # 根据斑块的颜色特征设定阈值
     lower_threshold = np.array([0, 0, 0])
     upper_threshold = np.array([200, 180, 205])
-    # upper_threshold = np.array([200, 180, 200])
     mask = cv2.inRange(im, lower_threshold, upper_threshold)
     mask = cv2.erode(mask, np.ones((3, 3), np.uint8), iterations=4)
     mask = cv2.dilate(mask, np.ones((3, 3), np.uint8), iterations=6)
-    # mask = cv2.erode(mask, np.ones((3, 3), np.uint8), iterations=2)
-    # mask = cv2.dilate(mask, np.ones((3, 3), np.uint8), iterations=4)
-    # cv2.imwrite('mask.jpg', mask)
 
     # RETR_EXTERNAL 如果你选择这种模式的话，只会返回最外边的的轮廓，所有的子轮廓都会被忽略掉
     # RETR_TREE 则会给出轮廓层级关系
@@ -74,7 +80,7 @@ def THCounting(im):
 
     num = 0 # TH总数
     fitEllipseError = 0
-    area_mean = 3200*hight*width/(4080*3072)
+    area_mean = 3000*hight*width/(4080*3072)
     area_threshold2 = area_mean*1
     area_threshold1 = area_mean/5
 
@@ -93,13 +99,13 @@ def THCounting(im):
             if area > area_threshold2:
                 num = num + round(area/area_mean)
                 cv2.putText(im_copy, str(int(round(area/area_mean))), pt, cv2.FONT_HERSHEY_SIMPLEX, 2, (255,255,255), 3)
-                im_copy = cv2.ellipse(im_copy, ellipse,(255,255,255),2) # 在原始彩色图像上绘制椭圆
+                im_copy = cv2.ellipse(im_copy, ellipse,(0,0,255),2) # 在原始彩色图像上绘制椭圆
 
             # 如果是普通大小区域则num+1
             elif area_threshold1 < area < area_threshold2:
                 num = num + 1
                 cv2.putText(im_copy, '1', pt, cv2.FONT_HERSHEY_SIMPLEX, 2, (255,255,255), 3)
-                im_copy = cv2.ellipse(im_copy, ellipse,(255,255,255),2) # 在原始彩色图像上绘制椭圆
+                im_copy = cv2.ellipse(im_copy, ellipse,(0,0,255),2) # 在原始彩色图像上绘制椭圆
 
             # 如果是超小区域则忽略
             else: pass
